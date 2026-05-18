@@ -1,7 +1,4 @@
 @inherits LayoutComponentBase
-@inject NavigationManager Nav
-@inject AuthState Auth
-@inject IJSRuntime JS
 
 <div class="ft-shell" data-bs-theme="@_theme">
     <header class="ft-header">
@@ -18,7 +15,8 @@
                 <AuthorizeView>
                     <Authorized>
                         <span class="ft-user">@context.User.Identity?.Name</span>
-                        <button class="ft-btn-ghost" @onclick="SignOut">Sign out</button>
+                        @* Cookie sign-out is a server request, not a JS call. *@
+                        <a class="ft-btn-ghost" href="/_auth/signout">Sign out</a>
                     </Authorized>
                 </AuthorizeView>
             </div>
@@ -32,10 +30,4 @@
     private string _theme = "light";
 
     private void ToggleTheme() => _theme = _theme == "dark" ? "light" : "dark";
-
-    private void SignOut()
-    {
-        Auth.SignOut();
-        Nav.NavigateTo("/login", forceLoad: false);
-    }
 }

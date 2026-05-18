@@ -1,5 +1,5 @@
-using Ticketing.Web.Models;
 using Refit;
+using Ticketing.Web.Models;
 
 namespace Ticketing.Web.Services;
 
@@ -19,24 +19,4 @@ public interface ITicketsApi
 
     [Delete("/api/tickets/{id}")]
     Task<IApiResponse<object?>> Delete(string id);
-}
-
-/// <summary>Login proxy against the existing FRELODYAPIs authorization endpoints.</summary>
-public interface IFrelodyAuthApi
-{
-    [Post("/api/authorization/login")]
-    Task<IApiResponse<FrelodyLoginResponse>> Login([Body] FrelodyLoginRequest body);
-}
-
-public class FrelodyLoginRequest
-{
-    public string Email { get; set; } = "";
-    public string Password { get; set; } = "";
-}
-
-public class FrelodyLoginResponse
-{
-    public string? Token { get; set; }
-    public string? RefreshToken { get; set; }
-    public string? TenantId { get; set; }
 }

@@ -1,40 +1,54 @@
-using Ticketing.Web.Components;
-using Ticketing.Web.Services;
-using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Refit;
+using Ticketing.Web.Components;
+using Ticketing.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Data protection: persist keys so antiforgery survives container restarts.
+// ── Data protection: persist keys so antiforgery + auth cookies survive restarts.
 var dpKeysDir = builder.Configuration["DataProtection:KeysDirectory"]
                 ?? Path.Combine(builder.Environment.ContentRootPath, "dp-keys");
 Directory.CreateDirectory(dpKeysDir);
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(dpKeysDir));
 
-// ── Blazor Server with auth-aware routing ───────────────────────────────────
+// ── Blazor Server + MVC controllers (for /_auth/* signin/signout) ───────────
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddAuthenticationCore();
-builder.Services.AddAuthorizationCore();
+// ── Cookie authentication ───────────────────────────────────────────────────
+// AuthorizeRouteView's challenge path needs a registered scheme; this also
+// gives us a normal sign-in/sign-out flow for the kanban.
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(o =>
+    {
+        o.Cookie.Name = "ticketing.auth";
+        o.LoginPath = "/login";
+        o.AccessDeniedPath = "/login";
+        o.LogoutPath = "/_auth/signout";
+        o.ExpireTimeSpan = TimeSpan.FromDays(7);
+        o.SlidingExpiration = false; // expire when the JWT expires
+        o.Cookie.HttpOnly = true;
+        o.Cookie.SameSite = SameSiteMode.Lax;
+        o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 
-// One session per circuit; AuthState exposes the JWT to the BearerHandler.
-builder.Services.AddScoped<SessionStore>();
-builder.Services.AddScoped<AuthState>();
-builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthState>());
 builder.Services.AddTransient<BearerHandler>();
 
 // ── Refit clients ───────────────────────────────────────────────────────────
 var ticketsApiBase = new Uri(builder.Configuration["Apis:Tickets"] ?? "http://localhost:8090");
-var frelodyApiBase = new Uri(builder.Configuration["Apis:Frelody"] ?? "http://localhost:8080");
 
 builder.Services.AddRefitClient<ITicketsApi>()
     .ConfigureHttpClient(c => c.BaseAddress = ticketsApiBase)
     .AddHttpMessageHandler<BearerHandler>();
 
-builder.Services.AddRefitClient<IFrelodyAuthApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = frelodyApiBase);
+// Login proxy — no bearer needed (the /api/auth/login endpoint is anonymous).
+builder.Services.AddRefitClient<ITicketingAuthApi>()
+    .ConfigureHttpClient(c => c.BaseAddress = ticketsApiBase);
 
 var app = builder.Build();
 
@@ -50,8 +64,12 @@ if (!string.IsNullOrEmpty(app.Configuration["ASPNETCORE_HTTPS_PORT"]))
 }
 
 app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 
+app.MapControllers();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

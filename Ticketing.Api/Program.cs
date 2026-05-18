@@ -1,10 +1,13 @@
-using Ticketing.Api.Data;
-using Ticketing.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using Ticketing.Api.Data;
+using Ticketing.Api.Models;
+using Ticketing.Api.Seeding;
+using Ticketing.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +17,24 @@ var conn = builder.Configuration.GetConnectionString("TicketsData")
 
 builder.Services.AddDbContext<TicketsDbContext>(o => o.UseSqlServer(conn));
 
-// ── Services ────────────────────────────────────────────────────────────────
+// ── Identity ────────────────────────────────────────────────────────────────
+// Small, internal app — low-friction password rules. Tighten if exposed publicly.
+builder.Services.AddIdentity<TicketingUser, IdentityRole>(o =>
+    {
+        o.Password.RequireDigit = false;
+        o.Password.RequireLowercase = false;
+        o.Password.RequireUppercase = false;
+        o.Password.RequireNonAlphanumeric = false;
+        o.Password.RequiredLength = 8;
+        o.User.RequireUniqueEmail = true;
+    })
+    .AddEntityFrameworkStores<TicketsDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IdentitySeeder>();
+
+// ── Domain services ─────────────────────────────────────────────────────────
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<OtlpLogsReceiver>();
 builder.Services.AddScoped<ITicketAiService, TicketAiService>();
@@ -41,10 +61,17 @@ builder.Services.AddOpenApi();
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = 32_000_000);
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 32_000_000);
 
-// ── Auth: validate JWTs issued by FRELODYAPIs ───────────────────────────────
+// ── Auth: validate Ticketing's own JWTs ─────────────────────────────────────
+// AddIdentity above already set the default scheme to ApplicationCookie; we
+// override here so [Authorize] on API controllers uses JWT bearer by default,
+// while Identity's cookie scheme stays available for any future MVC pages.
 var jwtKey = builder.Configuration["Jwt:Key"]
              ?? throw new InvalidOperationException("Jwt:Key missing");
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication(o =>
+    {
+        o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(o =>
     {
         o.RequireHttpsMetadata = false;
@@ -54,14 +81,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "ticketing",
+            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "ticketing",
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            // FRELODYAPIs adds the role claim under the standard role claim type.
             RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             NameClaimType = System.Security.Claims.ClaimTypes.Email,
         };
     });
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddCors(o => o.AddPolicy("AllowAll",
@@ -72,15 +99,19 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    var sp = scope.ServiceProvider;
+    var logger = sp.GetRequiredService<ILogger<Program>>();
     try
     {
-        var db = scope.ServiceProvider.GetRequiredService<TicketsDbContext>();
+        var db = sp.GetRequiredService<TicketsDbContext>();
         db.Database.Migrate();
+
+        var seeder = sp.GetRequiredService<IdentitySeeder>();
+        await seeder.SeedAsync();
     }
     catch (Exception ex)
     {
-        app.Services.GetRequiredService<ILogger<Program>>()
-            .LogError(ex, "Ticketing migrate failed");
+        logger.LogError(ex, "Ticketing startup (migrate / seed) failed");
     }
 }
 

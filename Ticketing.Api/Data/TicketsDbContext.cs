@@ -1,9 +1,10 @@
-using Ticketing.Api.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Ticketing.Api.Models;
 
 namespace Ticketing.Api.Data;
 
-public class TicketsDbContext : DbContext
+public class TicketsDbContext : IdentityDbContext<TicketingUser>
 {
     public TicketsDbContext(DbContextOptions<TicketsDbContext> options) : base(options) { }
 

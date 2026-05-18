@@ -1,10 +1,6 @@
 @page "/login"
 @layout LandingLayout
-@inject IFrelodyAuthApi AuthApi
-@inject AuthState Auth
-@inject NavigationManager Nav
-@inject ILogger<Login> Logger
-@rendermode InteractiveServer
+@* Static SSR — the form posts to /_auth/signin which sets the cookie. *@
 
 <PageTitle>Sign in — Frelody Tickets</PageTitle>
 
@@ -13,107 +9,40 @@
     <header class="lg-brand">
         <span class="lg-brand-mark">FT</span>
         <h1 class="lg-title">Frelody Tickets</h1>
-        <p class="lg-sub">Sign in with your Frelody admin account</p>
+        <p class="lg-sub">Sign in with your Ticketing admin account</p>
     </header>
 
-    <EditForm Model="_model" OnValidSubmit="Submit" FormName="ticketsLogin" class="lg-form">
-        <DataAnnotationsValidator />
+    <form method="post" action="/_auth/signin" class="lg-form" autocomplete="on">
 
-        @if (!string.IsNullOrEmpty(_error))
+        @if (!string.IsNullOrEmpty(Error))
         {
-            <div class="lg-error" role="alert">@_error</div>
+            <div class="lg-error" role="alert">@Error</div>
+        }
+
+        @if (!string.IsNullOrEmpty(ReturnUrl))
+        {
+            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
         }
 
         <div class="lg-field">
             <label for="lg-email">Email</label>
-            <input id="lg-email" type="email" class="lg-input" autocomplete="email"
-                   @bind="_model.Email" @bind:event="oninput" disabled="@_busy" />
+            <input id="lg-email" name="email" type="email" required
+                   class="lg-input" autocomplete="username" />
         </div>
 
         <div class="lg-field">
             <label for="lg-pass">Password</label>
-            <input id="lg-pass" type="password" class="lg-input" autocomplete="current-password"
-                   @bind="_model.Password" @bind:event="oninput" disabled="@_busy" />
+            <input id="lg-pass" name="password" type="password" required
+                   class="lg-input" autocomplete="current-password" />
         </div>
 
-        <button class="lg-submit" type="submit" disabled="@_busy">
-            @if (_busy) { <span class="spinner-border spinner-border-sm" /> <span>Signing in…</span> }
-            else        { <span>Sign in</span> }
-        </button>
-    </EditForm>
+        <button class="lg-submit" type="submit">Sign in</button>
+    </form>
 
     <footer class="lg-foot">Restricted to SuperAdmin accounts only.</footer>
 </div>
 
 @code {
     [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
-
-    private LoginRequest _model = new();
-    private bool _busy;
-    private string? _error;
-
-    private async Task Submit()
-    {
-        _busy = true; _error = null;
-        try
-        {
-            var resp = await AuthApi.Login(new FrelodyLoginRequest
-            {
-                Email = _model.Email,
-                Password = _model.Password,
-            });
-
-            if (!resp.IsSuccessStatusCode || resp.Content is null || string.IsNullOrEmpty(resp.Content.Token))
-            {
-                _error = "Invalid credentials, or your account does not have access.";
-                return;
-            }
-
-            var roles = ExtractRoles(resp.Content.Token);
-            if (!roles.Contains("SuperAdmin", StringComparer.OrdinalIgnoreCase))
-            {
-                _error = "Your account is not authorized for this app.";
-                return;
-            }
-
-            Auth.SignIn(new LoginSession
-            {
-                Token = resp.Content.Token,
-                RefreshToken = resp.Content.RefreshToken,
-                Email = _model.Email,
-                Roles = roles.ToArray(),
-            });
-
-            Nav.NavigateTo(string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl, forceLoad: false);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Login failed");
-            _error = "Login failed. Please try again.";
-        }
-        finally { _busy = false; }
-    }
-
-    private static List<string> ExtractRoles(string jwt)
-    {
-        var roles = new List<string>();
-        try
-        {
-            var parts = jwt.Split('.');
-            if (parts.Length != 3) return roles;
-            var s = parts[1];
-            s = (s.Length % 4) switch { 2 => s + "==", 3 => s + "=", _ => s };
-            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(s));
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            foreach (var name in new[] { "role", "roles", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" })
-            {
-                if (!doc.RootElement.TryGetProperty(name, out var p)) continue;
-                if (p.ValueKind == System.Text.Json.JsonValueKind.Array)
-                    foreach (var v in p.EnumerateArray()) roles.Add(v.ToString());
-                else roles.Add(p.ToString());
-            }
-        }
-        catch { }
-        return roles;
-    }
+    [SupplyParameterFromQuery] public string? Error { get; set; }
 }
