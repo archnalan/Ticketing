@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Ticketing.Api</RootNamespace>
     <AssemblyName>Ticketing.Api</AssemblyName>
+    <UserSecretsId>feb2ee56-f741-4e95-a1ac-f547e0e99ccd</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

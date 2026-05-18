@@ -1,6 +1,6 @@
 @inherits LayoutComponentBase
 
-<div class="ft-shell" data-bs-theme="@_theme">
+<div class="ft-shell">
     <header class="ft-header">
         <div class="ft-header-inner">
             <a class="ft-brand" href="/">
@@ -9,13 +9,15 @@
             </a>
 
             <div class="ft-header-right">
-                <button class="ft-icon-btn" @onclick="ToggleTheme" aria-label="Toggle theme">
-                    <i class="bi @(_theme == "dark" ? "bi-sun-fill" : "bi-moon-fill")"></i>
+                @* Plain JS toggle so the button works whether or not the layout is
+                   rendered interactively. ftToggleTheme is defined in App.razor. *@
+                <button class="ft-icon-btn" type="button" onclick="ftToggleTheme()" aria-label="Toggle theme">
+                    <i class="bi bi-moon-fill ft-icon-light" aria-hidden="true"></i>
+                    <i class="bi bi-sun-fill ft-icon-dark" aria-hidden="true"></i>
                 </button>
                 <AuthorizeView>
                     <Authorized>
                         <span class="ft-user">@context.User.Identity?.Name</span>
-                        @* Cookie sign-out is a server request, not a JS call. *@
                         <a class="ft-btn-ghost" href="/_auth/signout">Sign out</a>
                     </Authorized>
                 </AuthorizeView>
@@ -25,9 +27,3 @@
 
     <main class="ft-body">@Body</main>
 </div>
-
-@code {
-    private string _theme = "light";
-
-    private void ToggleTheme() => _theme = _theme == "dark" ? "light" : "dark";
-}

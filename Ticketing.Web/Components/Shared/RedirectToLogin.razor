@@ -3,7 +3,16 @@
 @code {
     protected override void OnInitialized()
     {
-        var current = Nav.ToBaseRelativePath(Nav.Uri);
-        Nav.NavigateTo($"/login?returnUrl=/{current}", forceLoad: false);
+        // ToBaseRelativePath strips the leading slash; re-add a single one only
+        // when there is something to return to. forceLoad: true bypasses
+        // Blazor's enhanced navigation — without it the combination of base
+        // href and absolute path produced a "//login" URL in the address bar.
+        var current = Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/');
+        string url = "/login";
+        if (!string.IsNullOrEmpty(current) && !current.StartsWith("login", StringComparison.OrdinalIgnoreCase))
+        {
+            url += $"?returnUrl={Uri.EscapeDataString("/" + current)}";
+        }
+        Nav.NavigateTo(url, forceLoad: true);
     }
 }
