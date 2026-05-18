@@ -1,0 +1,41 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject AuthState Auth
+@inject IJSRuntime JS
+
+<div class="ft-shell" data-bs-theme="@_theme">
+    <header class="ft-header">
+        <div class="ft-header-inner">
+            <a class="ft-brand" href="/">
+                <span class="ft-brand-fre">FRE</span><span class="ft-brand-lody">LODY</span>
+                <span class="ft-brand-tag">Tickets</span>
+            </a>
+
+            <div class="ft-header-right">
+                <button class="ft-icon-btn" @onclick="ToggleTheme" aria-label="Toggle theme">
+                    <i class="bi @(_theme == "dark" ? "bi-sun-fill" : "bi-moon-fill")"></i>
+                </button>
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="ft-user">@context.User.Identity?.Name</span>
+                        <button class="ft-btn-ghost" @onclick="SignOut">Sign out</button>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </header>
+
+    <main class="ft-body">@Body</main>
+</div>
+
+@code {
+    private string _theme = "light";
+
+    private void ToggleTheme() => _theme = _theme == "dark" ? "light" : "dark";
+
+    private void SignOut()
+    {
+        Auth.SignOut();
+        Nav.NavigateTo("/login", forceLoad: false);
+    }
+}

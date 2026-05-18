@@ -1,0 +1,94 @@
+.ft-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--ft-bg-page);
+    color: var(--ft-text);
+    font-family: 'Kanit', system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+.ft-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--ft-bg-card);
+    border-bottom: 1px solid var(--ft-border);
+    backdrop-filter: blur(8px);
+}
+
+.ft-header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--k-space-3) var(--k-space-4);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--k-space-3);
+}
+
+.ft-brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--k-space-2);
+    text-decoration: none;
+    color: inherit;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+}
+
+.ft-brand-fre { color: var(--ft-text-strong); }
+.ft-brand-lody { color: var(--ft-accent); }
+.ft-brand-tag {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--ft-text-muted);
+    border: 1px solid var(--ft-border);
+    padding: 2px 8px;
+    border-radius: var(--k-radius-pill);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.ft-header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2);
+}
+
+.ft-user {
+    font-size: 0.85rem;
+    color: var(--ft-text-muted);
+}
+
+.ft-icon-btn,
+.ft-btn-ghost {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ft-text);
+    padding: 6px 10px;
+    border-radius: var(--k-radius-sm);
+    cursor: pointer;
+    transition: var(--k-transition);
+    font-size: 0.85rem;
+}
+
+.ft-icon-btn:hover,
+.ft-btn-ghost:hover {
+    background: var(--ft-bg-hover);
+    border-color: var(--ft-border);
+}
+
+.ft-body {
+    flex: 1;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--k-space-4);
+}
+
+@media (max-width: 640px) {
+    .ft-header-inner { padding: var(--k-space-2) var(--k-space-3); }
+    .ft-body { padding: var(--k-space-3); }
+    .ft-user { display: none; }
+}

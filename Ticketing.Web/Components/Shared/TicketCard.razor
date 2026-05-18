@@ -1,0 +1,123 @@
+@*  Draggable ticket card. Adapted from CRM+Ticketing/DealCard for ticket data. *@
+
+<div class="tc-card tc-card--@AccentClass @(IsDragging ? "tc-card--dragging" : "")"
+     draggable="true"
+     @ondragstart="HandleDragStart"
+     @ondragend="HandleDragEnd"
+     role="article"
+     aria-label="Ticket @Ticket.Title">
+
+    <div class="tc-top">
+        <span class="tc-sev tc-sev--@Ticket.Severity.ToString().ToLower()">@SeverityLabel(Ticket.Severity)</span>
+        @if (Ticket.OccurrenceCount > 1)
+        {
+            <span class="tc-count" title="Occurrence count">×@Ticket.OccurrenceCount</span>
+        }
+        <button type="button" class="tc-menu" @onclick="ToggleMenu" @onclick:stopPropagation="true"
+                aria-label="Ticket options">
+            <i class="bi bi-three-dots-vertical"></i>
+        </button>
+    </div>
+
+    <h4 class="tc-title">@Ticket.Title</h4>
+
+    @if (!string.IsNullOrWhiteSpace(Ticket.Description))
+    {
+        <p class="tc-desc">@Truncate(Ticket.Description, 140)</p>
+    }
+
+    <div class="tc-meta">
+        @if (Ticket.Source == TicketSource.Error)
+        {
+            <span class="tc-meta-item" title="Service">
+                <i class="bi bi-server"></i>
+                @(Ticket.ServiceName ?? "unknown")
+            </span>
+            @if (!string.IsNullOrWhiteSpace(Ticket.ExceptionType))
+            {
+                <span class="tc-meta-item tc-meta-item--code" title="Exception type">
+                    @ShortType(Ticket.ExceptionType)
+                </span>
+            }
+        }
+        else if (Ticket.Source == TicketSource.Feedback)
+        {
+            <span class="tc-meta-item" title="Reporter">
+                <i class="bi bi-person"></i>
+                @(Ticket.ReporterName ?? Ticket.ReporterEmail ?? "anonymous")
+            </span>
+        }
+        <span class="tc-meta-item tc-meta-item--time" title="Created">
+            <i class="bi bi-clock"></i>
+            @RelativeTime(Ticket.DateCreated)
+        </span>
+    </div>
+
+    @if (_menuOpen)
+    {
+        <div class="tc-dropdown" role="menu">
+            <button class="tc-dropdown-item tc-dropdown-item--danger" @onclick="HandleDelete">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </div>
+    }
+</div>
+
+@if (_menuOpen)
+{
+    <div class="tc-overlay" @onclick="() => _menuOpen = false"></div>
+}
+
+@code {
+    [Parameter, EditorRequired] public TicketDto Ticket { get; set; } = default!;
+    [Parameter, EditorRequired] public string AccentClass { get; set; } = "blue";
+    [Parameter] public bool IsDragging { get; set; }
+    [Parameter] public EventCallback OnDragStarted { get; set; }
+    [Parameter] public EventCallback OnDragEnded { get; set; }
+    [Parameter] public EventCallback<TicketDto> OnDelete { get; set; }
+
+    private bool _menuOpen;
+
+    private void ToggleMenu() => _menuOpen = !_menuOpen;
+
+    private async Task HandleDragStart(DragEventArgs _)
+    {
+        _menuOpen = false;
+        await OnDragStarted.InvokeAsync();
+    }
+
+    private async Task HandleDragEnd(DragEventArgs _) => await OnDragEnded.InvokeAsync();
+
+    private async Task HandleDelete()
+    {
+        _menuOpen = false;
+        await OnDelete.InvokeAsync(Ticket);
+    }
+
+    private static string SeverityLabel(TicketSeverity s) => s switch
+    {
+        TicketSeverity.Critical => "CRIT",
+        TicketSeverity.High => "HIGH",
+        TicketSeverity.Medium => "MED",
+        _ => "LOW",
+    };
+
+    private static string ShortType(string fullType)
+    {
+        var idx = fullType.LastIndexOf('.');
+        return idx >= 0 && idx < fullType.Length - 1 ? fullType[(idx + 1)..] : fullType;
+    }
+
+    private static string Truncate(string s, int max)
+        => s.Length <= max ? s : s[..max].TrimEnd() + "…";
+
+    private static string RelativeTime(DateTimeOffset when)
+    {
+        var d = DateTimeOffset.UtcNow - when;
+        if (d.TotalMinutes < 1) return "just now";
+        if (d.TotalMinutes < 60) return $"{(int)d.TotalMinutes}m ago";
+        if (d.TotalHours < 24) return $"{(int)d.TotalHours}h ago";
+        if (d.TotalDays < 7) return $"{(int)d.TotalDays}d ago";
+        return when.LocalDateTime.ToString("MMM d");
+    }
+}

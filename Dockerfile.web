@@ -1,0 +1,32 @@
+# ============================================================
+# Ticketing.Web – Blazor Server kanban UI
+# Build context: ./Ticketing/
+# Listens on port 5090.
+# ============================================================
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+WORKDIR /src
+
+COPY Ticketing.Web/Ticketing.Web.csproj Ticketing.Web/
+RUN dotnet restore Ticketing.Web/Ticketing.Web.csproj
+
+COPY Ticketing.Web/ Ticketing.Web/
+
+WORKDIR /src/Ticketing.Web
+RUN dotnet publish Ticketing.Web.csproj \
+        -c Release \
+        -o /app/publish \
+        /p:UseAppHost=false \
+        --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
+WORKDIR /app
+
+RUN apk add --no-cache icu-libs
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+ENV ASPNETCORE_URLS=http://+:5090
+
+COPY --from=build /app/publish .
+
+EXPOSE 5090
+ENTRYPOINT ["dotnet", "Ticketing.Web.dll"]

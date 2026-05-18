@@ -1,0 +1,60 @@
+@*  One kanban column. Drop-target. *@
+
+<section class="tcol @(IsDragOver ? "tcol--drop" : "")"
+         @ondragover:preventDefault="true"
+         @ondrop="HandleDrop"
+         @ondragenter="HandleEnter"
+         @ondragleave="HandleLeave">
+
+    <header class="tcol-head">
+        <span class="tcol-dot tcol-dot--@AccentClass"></span>
+        <h3 class="tcol-title">@Title</h3>
+        <span class="tcol-count">@Tickets.Count</span>
+    </header>
+
+    <div class="tcol-body">
+        @if (Tickets.Count == 0)
+        {
+            <div class="tcol-empty">
+                <i class="bi bi-inbox"></i>
+                <span>Empty</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var t in Tickets)
+            {
+                <TicketCard Ticket="@t"
+                            AccentClass="@AccentClass"
+                            IsDragging="@(DraggingTicketId == t.Id)"
+                            OnDragStarted="@(() => OnDragStarted.InvokeAsync((t, Status)))"
+                            OnDragEnded="@OnDragEnded"
+                            OnDelete="@OnDelete" />
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public TicketStatus Status { get; set; }
+    [Parameter, EditorRequired] public string AccentClass { get; set; } = "blue";
+    [Parameter, EditorRequired] public List<TicketDto> Tickets { get; set; } = new();
+    [Parameter] public string? DraggingTicketId { get; set; }
+
+    [Parameter] public EventCallback<(TicketDto ticket, TicketStatus from)> OnDragStarted { get; set; }
+    [Parameter] public EventCallback OnDragEnded { get; set; }
+    [Parameter] public EventCallback<TicketStatus> OnDropped { get; set; }
+    [Parameter] public EventCallback<TicketDto> OnDelete { get; set; }
+
+    private int _depth;
+    private bool IsDragOver => _depth > 0;
+
+    private void HandleEnter(DragEventArgs _) => _depth++;
+    private void HandleLeave(DragEventArgs _) { if (_depth > 0) _depth--; }
+    private async Task HandleDrop(DragEventArgs _)
+    {
+        _depth = 0;
+        await OnDropped.InvokeAsync(Status);
+    }
+}

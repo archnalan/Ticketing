@@ -1,0 +1,72 @@
+@*  Modal for SuperAdmin-only manual ticket creation. *@
+
+@if (Visible)
+{
+    <div class="ctm-backdrop" @onclick="Cancel">
+        <div class="ctm-modal" @onclick:stopPropagation="true" role="dialog" aria-modal="true">
+            <header class="ctm-head">
+                <h3 class="ctm-title">New ticket</h3>
+                <button class="ctm-close" @onclick="Cancel" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </header>
+
+            <EditForm Model="_model" OnValidSubmit="Save" FormName="createTicket">
+                <DataAnnotationsValidator />
+
+                <div class="ctm-field">
+                    <label>Title</label>
+                    <input type="text" class="ctm-input" @bind="_model.Title" @bind:event="oninput"
+                           placeholder="Short summary" maxlength="200" />
+                </div>
+
+                <div class="ctm-field">
+                    <label>Description</label>
+                    <textarea class="ctm-input ctm-textarea" @bind="_model.Description" @bind:event="oninput"
+                              rows="4" placeholder="What needs doing?"></textarea>
+                </div>
+
+                <div class="ctm-field">
+                    <label>Severity</label>
+                    <select class="ctm-input" @bind="_model.Severity">
+                        <option value="@TicketSeverity.Low">Low</option>
+                        <option value="@TicketSeverity.Medium">Medium</option>
+                        <option value="@TicketSeverity.High">High</option>
+                        <option value="@TicketSeverity.Critical">Critical</option>
+                    </select>
+                </div>
+
+                <footer class="ctm-foot">
+                    <button type="button" class="ctm-btn ctm-btn--ghost" @onclick="Cancel">Cancel</button>
+                    <button type="submit" class="ctm-btn ctm-btn--primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_model.Title))">
+                        @if (_busy) { <span class="spinner-border spinner-border-sm" /> }
+                        else { <text>Create</text> }
+                    </button>
+                </footer>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<CreateTicketDto> OnCreate { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private CreateTicketDto _model = new();
+    private bool _busy;
+
+    protected override void OnParametersSet()
+    {
+        if (Visible) { _model = new CreateTicketDto(); _busy = false; }
+    }
+
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+
+    private async Task Save()
+    {
+        _busy = true;
+        try { await OnCreate.InvokeAsync(_model); }
+        finally { _busy = false; }
+    }
+}

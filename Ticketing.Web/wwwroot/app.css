@@ -1,0 +1,98 @@
+/* ============================================================
+   Ticketing — global tokens + base
+   Mirrors the --k-* vocabulary from FRELODYUI.Shared/app.css and
+   adds a local --ft-* surface palette tuned for a dense kanban.
+   ============================================================ */
+
+:root, [data-bs-theme="light"] {
+    /* k-tokens: spacing / radii / shadows / motion (shared vocabulary) */
+    --k-space-1: 0.25rem;
+    --k-space-2: 0.5rem;
+    --k-space-3: 0.75rem;
+    --k-space-4: 1rem;
+    --k-space-5: 1.25rem;
+    --k-space-6: 1.5rem;
+
+    --k-radius-xs: 0.4rem;
+    --k-radius-sm: 6px;
+    --k-radius: 10px;
+    --k-radius-md: 0.85rem;
+    --k-radius-lg: 14px;
+    --k-radius-pill: 999px;
+
+    --k-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --k-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    --k-shadow-lg: 0 18px 40px -12px rgba(15, 23, 42, 0.18);
+    --k-shadow-hover: 0 10px 25px rgba(15, 23, 42, 0.08);
+
+    --k-transition-fast: 120ms ease;
+    --k-transition: 160ms ease;
+    --k-transition-slow: 220ms ease-out;
+
+    /* ft- surface palette (light) */
+    --ft-bg-page: #f6f7fb;
+    --ft-bg-card: #ffffff;
+    --ft-bg-col: #f9fafb;
+    --ft-bg-input: #ffffff;
+    --ft-bg-hover: #f1f3f6;
+
+    --ft-text: #1f2937;
+    --ft-text-strong: #0f172a;
+    --ft-text-muted: #6b7280;
+
+    --ft-border: #e5e7eb;
+
+    --ft-accent: #6366f1;
+    --ft-accent-strong: #4f46e5;
+    --ft-accent-soft: rgba(99, 102, 241, 0.12);
+
+    --ft-success: #10b981;
+    --ft-success-soft: rgba(16, 185, 129, 0.12);
+    --ft-danger: #b91c1c;
+    --ft-danger-soft: rgba(239, 68, 68, 0.12);
+}
+
+[data-bs-theme="dark"] {
+    --k-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --k-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --k-shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
+    --k-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+    --ft-bg-page: #0b1020;
+    --ft-bg-card: #131a2e;
+    --ft-bg-col: #0f1527;
+    --ft-bg-input: #1a2238;
+    --ft-bg-hover: #1c2640;
+
+    --ft-text: #e5e7eb;
+    --ft-text-strong: #f8fafc;
+    --ft-text-muted: #9aa4bf;
+
+    --ft-border: #28324d;
+
+    --ft-accent: #818cf8;
+    --ft-accent-strong: #6366f1;
+    --ft-accent-soft: rgba(129, 140, 248, 0.18);
+
+    --ft-success: #34d399;
+    --ft-success-soft: rgba(52, 211, 153, 0.15);
+    --ft-danger: #fca5a5;
+    --ft-danger-soft: rgba(239, 68, 68, 0.2);
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Kanit', system-ui, -apple-system, Segoe UI, sans-serif;
+    background: var(--ft-bg-page);
+    color: var(--ft-text);
+    -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+a { color: var(--ft-accent); text-decoration: none; }
+a:hover { color: var(--ft-accent-strong); }
+
+/* Bootstrap spinner override */
+.spinner-border { width: 1rem; height: 1rem; border-width: 2px; }

@@ -1,0 +1,95 @@
+.tcol {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 300px;
+    min-width: 280px;
+    max-width: 320px;
+    background: var(--ft-bg-col);
+    border: 1px solid var(--ft-border);
+    border-radius: var(--k-radius-md);
+    overflow: hidden;
+    transition: var(--k-transition);
+}
+
+.tcol--drop {
+    border-color: var(--ft-accent);
+    background: var(--ft-accent-soft);
+    transform: scale(1.005);
+}
+
+.tcol-head {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    padding: var(--k-space-3) var(--k-space-3);
+    border-bottom: 1px solid var(--ft-border);
+    background: var(--ft-bg-card);
+}
+
+.tcol-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+}
+
+.tcol-dot--gray   { background: #9ca3af; }
+.tcol-dot--blue   { background: #3b82f6; }
+.tcol-dot--purple { background: #8b5cf6; }
+.tcol-dot--orange { background: #f59e0b; }
+.tcol-dot--green  { background: #10b981; }
+.tcol-dot--red    { background: #ef4444; }
+
+.tcol-title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ft-text-strong);
+    letter-spacing: 0.02em;
+    flex: 1;
+}
+
+.tcol-count {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--ft-text-muted);
+    background: var(--ft-bg-hover);
+    padding: 2px 8px;
+    border-radius: var(--k-radius-pill);
+}
+
+.tcol-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--k-space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-2);
+    min-height: 80px;
+}
+
+.tcol-body::-webkit-scrollbar { width: 6px; }
+.tcol-body::-webkit-scrollbar-thumb {
+    background: var(--ft-border);
+    border-radius: var(--k-radius-pill);
+}
+
+.tcol-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: var(--k-space-4) var(--k-space-3);
+    color: var(--ft-text-muted);
+    font-size: 0.75rem;
+}
+
+.tcol-empty i { font-size: 1.5rem; opacity: 0.5; }
+
+@media (max-width: 640px) {
+    .tcol {
+        flex: 0 0 85vw;
+        min-width: 270px;
+    }
+}

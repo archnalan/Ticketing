@@ -1,0 +1,31 @@
+## .NET / Visual Studio build output
+bin/
+obj/
+out/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.pdb
+
+## Rider / VS Code
+.idea/
+.vs/
+.vscode/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Local env / secrets
+.env
+.env.*
+appsettings.Local.json
+appsettings.*.user.json
+
+## Data protection keys (runtime-generated)
+dp-keys/
+
+## NuGet
+*.nupkg
+project.lock.json

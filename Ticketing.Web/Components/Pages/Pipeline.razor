@@ -1,0 +1,216 @@
+@page "/"
+@page "/pipeline"
+@attribute [Authorize(Roles = "SuperAdmin")]
+@inject ITicketsApi Api
+@inject ILogger<Pipeline> Logger
+@rendermode InteractiveServer
+
+<PageTitle>Pipeline — Frelody Tickets</PageTitle>
+
+<header class="pl-head">
+    <div>
+        <h1 class="pl-h1">Ticket Pipeline</h1>
+        <p class="pl-sub">Drag cards across columns to update status. Errors are auto-ingested from OpenTelemetry; feedback tickets appear when users submit feedback.</p>
+    </div>
+    <button class="pl-new" @onclick="OpenNew">
+        <i class="bi bi-plus-lg"></i> New ticket
+    </button>
+</header>
+
+<nav class="pl-tabs" role="tablist">
+    <button class="pl-tab @(_activeTab == TicketSource.Error ? "pl-tab--active" : "")"
+            @onclick="@(() => SwitchTab(TicketSource.Error))" role="tab">
+        <i class="bi bi-bug"></i> Errors
+        <span class="pl-tab-count">@_errorCount</span>
+    </button>
+    <button class="pl-tab @(_activeTab == TicketSource.Feedback ? "pl-tab--active" : "")"
+            @onclick="@(() => SwitchTab(TicketSource.Feedback))" role="tab">
+        <i class="bi bi-chat-square-text"></i> Feedback
+        <span class="pl-tab-count">@_feedbackCount</span>
+    </button>
+</nav>
+
+@if (_loading)
+{
+    <div class="pl-board">
+        @foreach (var c in _columnDefs)
+        {
+            <div class="pl-skel">
+                <div class="pl-skel-head"></div>
+                <div class="pl-skel-card"></div>
+                <div class="pl-skel-card"></div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="pl-board">
+        @foreach (var def in _columnDefs)
+        {
+            <TicketColumn Title="@def.Title"
+                          Status="@def.Status"
+                          AccentClass="@def.Accent"
+                          Tickets="@GroupedFor(def.Status)"
+                          DraggingTicketId="@_dragging?.Id"
+                          OnDragStarted="HandleDragStart"
+                          OnDragEnded="HandleDragEnd"
+                          OnDropped="HandleDrop"
+                          OnDelete="HandleDelete" />
+        }
+    </div>
+}
+
+<CreateTicketModal Visible="@_showCreate"
+                   OnCreate="HandleCreate"
+                   OnCancel="@(() => _showCreate = false)" />
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="pl-toast" role="alert">@_error</div>
+}
+
+@code {
+    private record ColumnDef(TicketStatus Status, string Title, string Accent);
+
+    private readonly ColumnDef[] _columnDefs = new[]
+    {
+        new ColumnDef(TicketStatus.Backlog,    "Backlog",     "gray"),
+        new ColumnDef(TicketStatus.Todo,       "To Do",       "blue"),
+        new ColumnDef(TicketStatus.InProgress, "In Progress", "purple"),
+        new ColumnDef(TicketStatus.Review,     "Review",      "orange"),
+        new ColumnDef(TicketStatus.Deployed,   "Deployed",    "green"),
+    };
+
+    private TicketSource _activeTab = TicketSource.Error;
+    private List<TicketDto> _all = new();
+    private bool _loading = true;
+    private bool _showCreate;
+    private string? _error;
+
+    private TicketDto? _dragging;
+    private TicketStatus? _dragSource;
+
+    private int _errorCount;
+    private int _feedbackCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _loading = true; _error = null;
+        try
+        {
+            var resp = await Api.List(null);
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _all = resp.Content;
+                _errorCount = _all.Count(t => t.Source == TicketSource.Error);
+                _feedbackCount = _all.Count(t => t.Source == TicketSource.Feedback);
+            }
+            else
+            {
+                _error = $"Failed to load tickets ({(int)resp.StatusCode}).";
+                _all = new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Pipeline load failed");
+            _error = "Failed to load tickets.";
+        }
+        finally { _loading = false; }
+    }
+
+    private void SwitchTab(TicketSource src) => _activeTab = src;
+
+    private List<TicketDto> GroupedFor(TicketStatus s)
+    {
+        // Errors tab shows Error+Manual together (Manual tickets are admin-created
+        // engineering work that lives next to error work). Feedback tab shows only feedback.
+        return _activeTab switch
+        {
+            TicketSource.Error    => _all.Where(t => (t.Source == TicketSource.Error || t.Source == TicketSource.Manual) && t.Status == s).ToList(),
+            TicketSource.Feedback => _all.Where(t => t.Source == TicketSource.Feedback && t.Status == s).ToList(),
+            _                     => _all.Where(t => t.Status == s).ToList(),
+        };
+    }
+
+    // ── Drag/drop handlers ───────────────────────────────────────────────
+    private void HandleDragStart((TicketDto ticket, TicketStatus from) args)
+    {
+        _dragging = args.ticket;
+        _dragSource = args.from;
+    }
+
+    private void HandleDragEnd() { _dragging = null; _dragSource = null; }
+
+    private async Task HandleDrop(TicketStatus target)
+    {
+        var t = _dragging;
+        var from = _dragSource;
+        HandleDragEnd();
+        if (t is null || from is null || from == target) return;
+
+        // Optimistic update
+        var local = _all.FirstOrDefault(x => x.Id == t.Id);
+        if (local is not null) local.Status = target;
+
+        try
+        {
+            var resp = await Api.UpdateStatus(t.Id, new UpdateStatusDto { Status = target });
+            if (!resp.IsSuccessStatusCode)
+            {
+                _error = "Failed to update status. Reverting.";
+                if (local is not null) local.Status = from.Value;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Drop failed");
+            if (local is not null) local.Status = from.Value;
+            _error = "Failed to update status.";
+        }
+    }
+
+    private async Task HandleCreate(CreateTicketDto dto)
+    {
+        try
+        {
+            var resp = await Api.Create(dto);
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _all.Insert(0, resp.Content);
+                _errorCount = _all.Count(t => t.Source == TicketSource.Error || t.Source == TicketSource.Manual);
+                _showCreate = false;
+                _activeTab = TicketSource.Error;
+            }
+            else { _error = "Failed to create ticket."; }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Create ticket failed");
+            _error = "Failed to create ticket.";
+        }
+    }
+
+    private async Task HandleDelete(TicketDto t)
+    {
+        try
+        {
+            var resp = await Api.Delete(t.Id);
+            if (resp.IsSuccessStatusCode) _all.RemoveAll(x => x.Id == t.Id);
+            else _error = "Failed to delete ticket.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Delete failed");
+            _error = "Failed to delete ticket.";
+        }
+    }
+
+    private void OpenNew() => _showCreate = true;
+}
