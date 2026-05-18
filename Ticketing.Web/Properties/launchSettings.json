@@ -3,7 +3,7 @@
     "Ticketing.Web": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "/login",
+      "launchUrl": "login",
       "applicationUrl": "http://localhost:5090",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
