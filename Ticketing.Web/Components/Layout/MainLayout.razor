@@ -15,6 +15,10 @@
                     <i class="bi bi-moon-fill ft-icon-light" aria-hidden="true"></i>
                     <i class="bi bi-sun-fill ft-icon-dark" aria-hidden="true"></i>
                 </button>
+                @* Hands the signed-in session off to the FRELODY docs site via /_auth/docs. *@
+                <a class="ft-btn-ghost" href="/_auth/docs">
+                    <i class="bi bi-book" aria-hidden="true"></i> Docs
+                </a>
                 <AuthorizeView>
                     <Authorized>
                         <span class="ft-user">@context.User.Identity?.Name</span>

@@ -1,4 +1,5 @@
 .ft-landing {
+    position: relative;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -6,4 +7,25 @@
     padding: var(--k-space-4);
     background: linear-gradient(135deg, var(--ft-bg-page) 0%, var(--ft-bg-card) 100%);
     font-family: 'Kanit', system-ui, -apple-system, sans-serif;
+}
+
+.ft-landing-docs {
+    position: absolute;
+    top: var(--k-space-4);
+    right: var(--k-space-4);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    color: var(--ft-text-muted);
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--k-radius-sm);
+    font-size: 0.85rem;
+    transition: var(--k-transition);
+}
+
+.ft-landing-docs:hover {
+    color: var(--ft-text);
+    background: var(--ft-bg-hover);
+    border-color: var(--ft-border);
 }

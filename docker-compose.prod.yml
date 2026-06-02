@@ -1,0 +1,67 @@
+# ============================================================
+# Production overrides for Ticketing
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# ============================================================
+
+services:
+
+  ticketing-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+
+      ConnectionStrings__TicketsData: >-
+        Server=frelody-sqlserver,1433;
+        Database=TicketingDb;
+        User Id=sa;
+        Password=${SA_PASSWORD};
+        Encrypt=False;
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+      Jwt__Key: "${JWT_KEY}"
+      Jwt__Issuer: "${JWT_ISSUER:-ticketing}"
+      Jwt__Audience: "${JWT_AUDIENCE:-ticketing}"
+
+      Auth__SuperAdmin__Email: "${SUPERADMIN_EMAIL}"
+      Auth__SuperAdmin__Password: "${SUPERADMIN_PASSWORD}"
+
+      Tickets__IngestSecret: "${TICKETS_INGEST_SECRET}"
+      OtlpReceiver__Secret: "${OTLP_RECEIVER_SECRET:-}"
+
+      API_KEYS__nvidiaApiKey: "${NVIDIA_API_KEY:-}"
+
+      Smtp__Host: "${SMTP_HOST}"
+      Smtp__Port: "${SMTP_PORT:-587}"
+      Smtp__User: "${SMTP_USER}"
+      Smtp__Password: "${SMTP_PASSWORD}"
+      Smtp__FromAddress: "${SMTP_FROM_ADDRESS:-tickets@frelody.com}"
+      Smtp__FromName: "${SMTP_FROM_NAME:-Frelody Tickets}"
+      Smtp__UseStartTls: "true"
+
+      Digest__SuperAdminEmail: "${SUPERADMIN_EMAIL}"
+      Digest__Enabled: "true"
+      Digest__ThresholdPerSource: "5"
+
+    ports:
+      - "8090:8090"
+    networks:
+      - frelody-net
+
+  ticketing-web:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+
+      Apis__Tickets: "http://ticketing-api:8090"
+      Apis__Frelody: "http://frelody-api:8080"
+
+      DataProtection__KeysDirectory: "/app/dp-keys"
+
+    ports:
+      - "5090:5090"
+    networks:
+      - frelody-net
+
+networks:
+  frelody-net:
+    external: true
+    name: frelody_frelody-net

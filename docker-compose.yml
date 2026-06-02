@@ -1,0 +1,83 @@
+services:
+
+  # ── Ticketing API ────────────────────────────────────────────
+  ticketing-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: ticketing-api:${APP_VERSION:-latest}
+    container_name: ticketing-api
+    ports:
+      - "8090:8090"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTPS_PORT: ""
+
+      ConnectionStrings__TicketsData: >-
+        Server=frelody-sqlserver,1433;
+        Database=TicketingDb;
+        User Id=sa;
+        Password=Frelody@Strong1;
+        Encrypt=False;
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+      Jwt__Key: "T!ck3t$$Jwt#K3y@Dev$$Local#Running"
+      Jwt__Issuer: "ticketing"
+      Jwt__Audience: "ticketing"
+
+      Auth__SuperAdmin__Email: "admin@tickets.frelody.com"
+      Auth__SuperAdmin__Password: "Admin@Tickets1"
+
+      Tickets__IngestSecret: "change-me-feedback-ingest-secret"
+      OtlpReceiver__Secret: ""
+
+      API_KEYS__nvidiaApiKey: ""
+
+      Smtp__Host: "frelody-maildev"
+      Smtp__Port: "25"
+      Smtp__User: ""
+      Smtp__Password: ""
+      Smtp__FromAddress: "tickets@frelody.com"
+      Smtp__FromName: "Frelody Tickets"
+      Smtp__UseStartTls: "false"
+
+      Digest__SuperAdminEmail: "admin@tickets.frelody.com"
+      Digest__Enabled: "true"
+      Digest__ThresholdPerSource: "5"
+
+    networks:
+      - frelody-net
+
+  # ── Ticketing Web (Blazor Server) ────────────────────────────
+  ticketing-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: ticketing-web:${APP_VERSION:-latest}
+    container_name: ticketing-web
+    ports:
+      - "5090:5090"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTPS_PORT: ""
+
+      Apis__Tickets: "http://ticketing-api:8090"
+      Apis__Frelody: "http://frelody-api:8080"
+
+      DataProtection__KeysDirectory: "/app/dp-keys"
+
+    volumes:
+      - ticketing_dp_keys:/app/dp-keys
+    depends_on:
+      - ticketing-api
+    networks:
+      - frelody-net
+
+volumes:
+  ticketing_dp_keys:
+
+networks:
+  frelody-net:
+    external: true
+    name: frelody_frelody-net

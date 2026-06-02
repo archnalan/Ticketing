@@ -1,3 +1,10 @@
 @inherits LayoutComponentBase
 
-<div class="ft-landing">@Body</div>
+<div class="ft-landing">
+    @* Same hand-off endpoint as the authenticated header. On the landing page there's
+       usually no session, so /_auth/docs simply opens the docs site without one. *@
+    <a class="ft-landing-docs" href="/_auth/docs">
+        <i class="bi bi-book" aria-hidden="true"></i> Docs
+    </a>
+    @Body
+</div>

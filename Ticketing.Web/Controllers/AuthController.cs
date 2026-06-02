@@ -22,11 +22,13 @@ public class AuthController : ControllerBase
 {
     private readonly ITicketingAuthApi _api;
     private readonly ILogger<AuthController> _logger;
+    private readonly IConfiguration _config;
 
-    public AuthController(ITicketingAuthApi api, ILogger<AuthController> logger)
+    public AuthController(ITicketingAuthApi api, ILogger<AuthController> logger, IConfiguration config)
     {
         _api = api;
         _logger = logger;
+        _config = config;
     }
 
     [HttpPost("signin")]
@@ -86,6 +88,43 @@ public class AuthController : ControllerBase
 
         var target = string.IsNullOrEmpty(returnUrl) || !Url.IsLocalUrl(returnUrl) ? "/pipeline" : returnUrl;
         return Redirect(target);
+    }
+
+    /// <summary>
+    /// Hands the signed-in user off to the FRELODY documentation site (a separate
+    /// WebAssembly SPA on another origin) carrying their current session.
+    ///
+    /// The docs site is not its own identity provider; it picks up a bridged session
+    /// from a URL fragment (<c>#session=&lt;base64url-json&gt;</c>) shaped like FRELODY's
+    /// <c>LoginResponseDto</c>, extracts the JWT and derives the user from its claims.
+    /// We reuse the exact base64url encoding FRELODY's web app uses so the docs
+    /// AuthService decodes it unchanged. A fragment never reaches a server and the docs
+    /// site strips it from the address bar on load, so the token isn't left visible.
+    ///
+    /// If no token is present (e.g. the anonymous landing page links here) we just open
+    /// the docs site without a session.
+    /// </summary>
+    [HttpGet("docs")]
+    public IActionResult Docs()
+    {
+        var docsBase = (_config["Urls:Docs"] ?? string.Empty).TrimEnd('/');
+        if (string.IsNullOrEmpty(docsBase))
+        {
+            _logger.LogWarning("Urls:Docs is not configured; cannot open the documentation site.");
+            return Redirect("/");
+        }
+
+        var token = User.FindFirst(BearerHandler.AccessTokenClaim)?.Value;
+        if (string.IsNullOrEmpty(token))
+            return Redirect(docsBase);
+
+        // LoginResponseDto-shaped payload — the docs AuthService only needs `token`;
+        // it derives name/roles/tier from the JWT's own claims.
+        var json = System.Text.Json.JsonSerializer.Serialize(new { token });
+        var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+        return Redirect($"{docsBase}/#session={encoded}");
     }
 
     [HttpGet("signout")]
