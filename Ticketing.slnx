@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".mcp.json" />
+  </Folder>
   <Project Path="Ticketing.Api/Ticketing.Api.csproj" />
   <Project Path="Ticketing.Web/Ticketing.Web.csproj" />
 </Solution>

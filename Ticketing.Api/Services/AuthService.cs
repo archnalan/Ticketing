@@ -74,7 +74,7 @@ public class AuthService : IAuthService
             new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? ""),
-            new(ClaimTypes.Name, user.UserName ?? user.Email ?? ""),
+            new(ClaimTypes.Name, user.DisplayName ?? user.UserName ?? user.Email ?? ""),
         };
         foreach (var r in roles)
             claims.Add(new Claim(ClaimTypes.Role, r));

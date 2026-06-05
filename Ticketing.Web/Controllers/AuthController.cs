@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using Ticketing.Web.Services;
 
@@ -61,10 +62,15 @@ public class AuthController : ControllerBase
         // Lift the API-issued JWT's claims into our cookie principal, and tuck
         // the raw token onto the principal so BearerHandler can forward it.
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(body.Token);
+        var name = jwt.Claims.FirstOrDefault(c =>
+            c.Type == ClaimTypes.Name ||
+            c.Type == JwtRegisteredClaimNames.Name ||
+            c.Type == "name")?.Value ?? body.Email;
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, jwt.Subject ?? body.Email),
-            new(ClaimTypes.Name,           jwt.Subject ?? body.Email),
+            new(ClaimTypes.Name,           name),
             new(ClaimTypes.Email,          body.Email),
             new(BearerHandler.AccessTokenClaim, body.Token),
         };
